@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Row, Cell } from './class/lingo';
 import { GetWordResult } from './interface/lingo';
 import { LingoService } from './services/lingo.service';
@@ -19,7 +19,7 @@ export class LingoComponent {
       next: (getWordResult: GetWordResult) => {
         this.word = getWordResult.word.toUpperCase();
         for(let i = 0; i < this.size; i++) {
-          this.rows.push(new Row(i === 0, this.size, this.word[0]));
+          this.rows.push(new Row(this.size, this.word[0], i === 0));
         }
         this.emitShowProgressBar.emit(true);
       }

@@ -1,1 +1,1 @@
-<input type="text" #input [ngModel]="cell.letter" [disabled]="!isEnabled" (ngModelChange)="onLetterChange($event)" (focus)="removeLetter()">
+<input type="text" #input [ngModel]="cell.letter" [disabled]="!cell.isEnabled" (ngModelChange)="onLetterChange($event)" (focus)="removeLetter()">

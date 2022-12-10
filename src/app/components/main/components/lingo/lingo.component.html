@@ -1,0 +1,7 @@
+<div class="row" *ngFor="let row of rows">
+  <lng-cell *ngFor="let cell of row.cells"
+            [isEnabled]="row.isEnabled"
+            [cell]="cell"
+            (emitLetterChange)="setIsCompleted(row)">
+  </lng-cell>
+</div>

@@ -1,0 +1,23 @@
+:host {
+  display: grid;
+  grid-template-columns: max-content;
+  justify-content: center;
+}
+
+div.row {
+  border-top: 1px solid black;
+  border-right: 1px solid black;
+  display: inline-block;
+
+  lng-cell {
+    display: inline-block;
+  }
+
+  lng-cell {
+    border-left: 1px solid black;
+  }
+}
+
+div.row:last-child {
+  border-bottom: 1px solid black;
+}

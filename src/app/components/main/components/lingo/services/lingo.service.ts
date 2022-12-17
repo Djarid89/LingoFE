@@ -11,7 +11,7 @@ export class LingoService {
 
   constructor(private readonly http: HttpClient) { }
 
-  getWord(): Observable<GetWordResult> {
-    return this.http.get<GetWordResult>(`${environment.baseHref}/lingo/getword`);
+  getWord(size: number): Observable<GetWordResult> {
+    return this.http.get<GetWordResult>(`${environment.baseHref}/lingo/getword/${size}`);
   }
 }

@@ -1,3 +1,4 @@
-<div class="row" *ngFor="let row of rows">
-  <lng-cell *ngFor="let cell of row.cells" [cell]="cell" (emitLetterChange)="setIsCompleted(row)"></lng-cell>
+<div class="row" *ngFor="let row of rows" [ngStyle]="{ 'grid-template-columns': getRowStyle() }">
+  <lng-cell *ngFor="let cell of row.cells" [isOnFocus]="cell.isOnFocus" [cell]="cell" [isVisible]="row.isVisible" (emitLetterChange)="setIsCompleted(row)"></lng-cell>
 </div>
+<button (click)="tryWord()">TRY WORD</button>

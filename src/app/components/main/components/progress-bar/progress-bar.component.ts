@@ -43,7 +43,9 @@ export class ProgressBarComponent implements AfterViewInit, OnChanges {
     step.value -= 1;
     greenBar.nativeElement.style.width = `${step.value}%`;
     
-    if(step.value === 25) {
+    if(step.value === 75) {
+      greenBar.nativeElement.style.backgroundColor = `yellow`;
+    } else if(step.value === 25) {
       greenBar.nativeElement.style.backgroundColor = `red`;
     }
   }

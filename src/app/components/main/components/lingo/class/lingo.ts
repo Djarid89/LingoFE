@@ -2,25 +2,29 @@ import { CellState } from "../interface/lingo";
 
 export class Row {
   cells: Cell[];
-  isCompleted: boolean;
+  isVisible: boolean;
+  isOnTry: boolean;
 
-  constructor(size: number, firstLetter: string, cellsIsEnabled: boolean) {
+  constructor(size: number) {
     this.cells = [];
     for(let i = 0; i < size; i++) {
-      this.cells.push(new Cell(i === 0 ? firstLetter : '', i === 0 ? CellState.find : CellState.none, cellsIsEnabled));
+      this.cells.push(new Cell(''));
     }
-    this.isCompleted = false;
+    this.isVisible = false;
+    this.isOnTry = false;
   }
 }
 
 export class Cell {
   letter: string;
   state: CellState;
-  isEnabled: boolean;
+  isDisabled: boolean;
+  isOnFocus: boolean;
 
-  constructor(letter: string, state = CellState.none, isEnabled: boolean) {
+  constructor(letter: string, state = CellState.none) {
     this.letter = letter;
     this.state = state;
-    this.isEnabled = isEnabled
+    this.isDisabled = true;
+    this.isOnFocus = false;
   }
 }

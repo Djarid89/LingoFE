@@ -8,7 +8,7 @@ export class Row {
   constructor(size: number) {
     this.cells = [];
     for(let i = 0; i < size; i++) {
-      this.cells.push(new Cell(''));
+      this.cells.push(new Cell(i, ''));
     }
     this.isVisible = false;
     this.isOnTry = false;
@@ -16,12 +16,14 @@ export class Row {
 }
 
 export class Cell {
+  index: number;
   letter: string;
   state: CellState;
   isDisabled: boolean;
   isOnFocus: boolean;
 
-  constructor(letter: string, state = CellState.none) {
+  constructor(index: number, letter: string, state = CellState.none) {
+    this.index = index;
     this.letter = letter;
     this.state = state;
     this.isDisabled = true;

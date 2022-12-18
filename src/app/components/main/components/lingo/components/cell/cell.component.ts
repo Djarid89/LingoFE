@@ -11,7 +11,7 @@ export class CellComponent implements OnChanges {
   @Input() cell!: Cell;
   @Input() isVisible = false;
   @Input() isOnFocus = false;
-  @Output() emitLetterChange = new EventEmitter<string>();
+  @Output() emitLetterChange = new EventEmitter<Cell>();
   @ViewChild("input") input!: ElementRef;
   CellState = CellState;
 
@@ -28,7 +28,7 @@ export class CellComponent implements OnChanges {
   onLetterChange(newLetter: string): void {
     this.cell.letter = newLetter.charAt(newLetter.length - 1).toUpperCase();
     this.input.nativeElement.blur();
-    this.emitLetterChange.emit(this.cell.letter);
+    this.emitLetterChange.emit(this.cell);
   }
 
   removeLetter(): void {
@@ -36,6 +36,7 @@ export class CellComponent implements OnChanges {
       return;
     }
 
+    this.cell.isOnFocus = true;
     this.cell.letter = '';
   }
 }

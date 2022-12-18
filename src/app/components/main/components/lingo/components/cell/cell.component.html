@@ -5,4 +5,4 @@
        [disabled]="cell.isDisabled || cell.state === CellState.find"
        (ngModelChange)="onLetterChange($event)"
        (focus)="removeLetter()"
-       [ngClass]="{ 'find': cell.state === CellState.find, 'present': cell.state === CellState.present }">
+       [ngClass]="{ 'find': cell.state === CellState.find, 'present': cell.state === CellState.present, 'error': cell.state === CellState.error }">

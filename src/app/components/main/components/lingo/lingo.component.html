@@ -1,4 +1,7 @@
-<div class="row" *ngFor="let row of rows" [ngStyle]="{ 'grid-template-columns': getRowStyle() }">
-  <lng-cell *ngFor="let cell of row.cells" [isOnFocus]="cell.isOnFocus" [cell]="cell" [isVisible]="row.isVisible" (emitLetterChange)="setIsCompleted(row, $event)"></lng-cell>
-</div>
-<button (click)="tryWord()">TRY WORD</button>
+<ng-container *ngIf="word">
+  <div class="row" *ngFor="let row of rows" [ngStyle]="{ 'grid-template-columns': getRowStyle() }">
+    <lng-cell *ngFor="let cell of row.cells" [isOnFocus]="cell.isOnFocus" [cell]="cell" [isVisible]="row.isVisible" (emitLetterChange)="setIsCompleted(row, $event)"></lng-cell>
+  </div>
+</ng-container>
+<button (click)="showWord()">SHOW WORD</button>
+{{wordDiscover}}

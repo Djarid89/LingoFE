@@ -1,2 +1,9 @@
-<lng-lingo (emitShowProgressBar)="setShowProgressBar($event)"></lng-lingo>
+<div class="size">
+  <label for="size">Lunghezza parole</label>
+  <input id="size" type="number" [(ngModel)]="size">
+</div>
+<lng-lingo (emitShowProgressBar)="setShowProgressBar($event)" [size]="size" [newGame]="newGame"></lng-lingo>
 <lng-progress-bar [show]="showProgressBar"></lng-progress-bar>
+<div class="newLingo">
+  <button (click)="setNewGame()">GET NEW LINGO</button>
+</div>

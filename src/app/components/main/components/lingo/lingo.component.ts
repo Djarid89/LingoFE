@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { Row, Cell } from './class/lingo';
 import { CellState, CheckWordResult, GetWordResult } from './interface/lingo';
 import { LingoService } from './services/lingo.service';
@@ -8,15 +8,27 @@ import { LingoService } from './services/lingo.service';
   templateUrl: './lingo.component.html',
   styleUrls: ['./lingo.component.scss']
 })
-export class LingoComponent {
+export class LingoComponent implements OnChanges {
   @Input() size = 5;
+  @Input() newGame = false;
   @Output() emitShowProgressBar = new EventEmitter<boolean>();
-  word!: string;
+  word = '';
+  wordDiscover = '';
   rows: Row[] = [];
   @ViewChild('row') rowsElements!: ElementRef[];
 
-  constructor(public readonly lingoService: LingoService) {
-    lingoService.getWord(this.size).pipe().subscribe({
+  constructor(public readonly lingoService: LingoService) { }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if(changes.newGame?.currentValue) {
+      this.getWord();
+    }
+  }
+
+  getWord(): void {
+    this.word = '';
+    this.rows = [];
+    this.lingoService.getWord(this.size).subscribe({
       next: (getWordResult: GetWordResult) => {
         this.word = getWordResult.word.toUpperCase();
         for(let i = 0; i < this.size; i++) {
@@ -49,7 +61,7 @@ export class LingoComponent {
   }
 
   getRowStyle(): string {
-    return `repeat(${this.size}, 1fr)`;
+    return `repeat(${this.rows.length}, 1fr)`;
   }
   
   setIsCompleted(row: Row, cell: Cell): void {
@@ -58,25 +70,15 @@ export class LingoComponent {
       if(row.cells.every((cell: Cell) => cell.letter !== '')) {
         this.tryWord();
         this.emitShowProgressBar.emit(false);
-      } else {
-        let indexCellOnFocus = cell.index;
-        while(true) {
-          indexCellOnFocus++;
-          if(indexCellOnFocus === this.size) {
-            indexCellOnFocus = 0;
-          }
-
-          if(row.cells[indexCellOnFocus].letter === '') {
-            row.cells[indexCellOnFocus].isOnFocus = true;
-            break;
-          }
-
-          if(indexCellOnFocus === cell.index) {
-            break;
-          }
-        }
+      } else if(cell.index + 1 < this.size) {
+        row.cells[cell.index + 1].isOnFocus = true;
       }
     });
+  }
+
+  showWord(): void {
+    this.wordDiscover = this.word;
+    setTimeout(() => this.wordDiscover = '', 5000);
   }
 
   tryWord(): void {
@@ -86,6 +88,7 @@ export class LingoComponent {
     let word = '';
     rowOnTry.cells.forEach((cell: Cell) => word += cell.letter);
 
+    const nextRowOnTry = rowOnTryIndex + 1 < this.size ? this.rows[rowOnTryIndex + 1] : null;
     this.lingoService.checkWord(word).subscribe({
       next: (checkWordResult: CheckWordResult) => {
         if(!checkWordResult.valid) {
@@ -112,9 +115,16 @@ export class LingoComponent {
             }
             cell.isDisabled = true;
           });
+
+          this.rows.forEach((row: Row) => {
+            row.cells.forEach((cell: Cell, index: number) => {
+              if(cell.state === CellState.find && nextRowOnTry) {
+                nextRowOnTry.cells[index].letter = cell.letter;
+              }
+            });
+          })
         }
 
-        const nextRowOnTry = rowOnTryIndex + 1 < this.size ? this.rows[rowOnTryIndex + 1] : null;
         rowOnTry.isOnTry = false;
         if(nextRowOnTry) {
           nextRowOnTry.isOnTry = true;
@@ -122,7 +132,7 @@ export class LingoComponent {
           let focusAssigned = false;
           nextRowOnTry.cells.forEach((cell: Cell) => {
             cell.isDisabled = false;
-            if(cell.state === CellState.none && !focusAssigned) {
+            if(cell.letter === '' && !focusAssigned) {
               cell.isOnFocus = true;
               focusAssigned = true;
             }

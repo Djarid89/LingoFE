@@ -7,8 +7,15 @@ import { Component } from '@angular/core';
 })
 export class MainComponent {
   showProgressBar = false;
+  newGame = false;
+  size = 5;
 
   setShowProgressBar(showProgressBar: boolean): void {
     this.showProgressBar = showProgressBar;
+  }
+
+  setNewGame(): void {
+    this.newGame = true;
+    setTimeout(() => this.newGame = false);
   }
 }

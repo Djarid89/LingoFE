@@ -1,6 +1,6 @@
 import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { Row, Cell } from './class/lingo';
-import { CellState, CheckWordResult, GetWordResult } from './interface/lingo';
+import { CellState, CheckWordResult, GetWordResult, UpdateWordsResult } from './interface/lingo';
 import { LingoService } from './services/lingo.service';
 
 @Component({
@@ -11,6 +11,9 @@ import { LingoService } from './services/lingo.service';
 export class LingoComponent implements OnChanges {
   @Input() size = 5;
   @Input() newGame = false;
+  @Input() timeIsUp = false;
+  @Output() emitResetProgressBar = new EventEmitter<void>();
+  @Output() emitStopProgressBar = new EventEmitter<void>();
   @Output() emitShowProgressBar = new EventEmitter<boolean>();
   word = '';
   wordDiscover = '';
@@ -22,6 +25,8 @@ export class LingoComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if(changes.newGame?.currentValue) {
       this.getWord();
+    } else if(changes.timeIsUp?.currentValue) {
+      this.setErrorNextWord();
     }
   }
 
@@ -69,7 +74,6 @@ export class LingoComponent implements OnChanges {
     setTimeout(() => {
       if(row.cells.every((cell: Cell) => cell.letter !== '')) {
         this.tryWord();
-        this.emitShowProgressBar.emit(false);
       } else if(cell.index + 1 < this.size) {
         row.cells[cell.index + 1].isOnFocus = true;
       }
@@ -81,60 +85,121 @@ export class LingoComponent implements OnChanges {
     setTimeout(() => this.wordDiscover = '', 5000);
   }
 
+  private setNext(nextRowOnTry: Row | null): void {
+    if(!nextRowOnTry) {
+      return ;
+    }
+
+    this.rows.forEach((row: Row) => {
+      row.cells.forEach((cell: Cell, index: number) => {
+        if(cell.state === CellState.find) {
+          nextRowOnTry.cells[index].letter = cell.letter;
+        }
+      });
+    })
+    nextRowOnTry.isOnTry = true;
+    nextRowOnTry.isVisible = true;
+    let focusAssigned = false;
+    nextRowOnTry.cells.forEach((cell: Cell) => {
+      cell.isDisabled = false;
+      if(cell.letter === '' && !focusAssigned) {
+        cell.isOnFocus = true;
+        focusAssigned = true;
+      }
+    });
+  }
+
+  private getValidWords(): string[] {
+    const validWords: string[] = [];
+    this.rows.forEach((row: Row) => {
+      if(row.cells.every((cell : Cell) => cell.state !== CellState.error)) {
+        validWords.push(this.composeWordFromCells(row));
+      }
+    });
+
+    return validWords;
+  }
+
+  private composeWordFromCells(row: Row): string {
+    let word = '';
+    row.cells.forEach((cell: Cell) => word += cell.letter);
+    return word;
+  }
+
+  private setErrorNextWord(): void {
+    const rowOnTryIndex = this.rows.findIndex((row: Row) => row.isOnTry);
+    const rowOnTry = this.rows[rowOnTryIndex];
+    rowOnTry?.cells.forEach((cell: Cell) => cell.state = CellState.error);
+    rowOnTry?.cells.forEach((cell: Cell) => cell.isDisabled = true);
+    rowOnTry?.cells.forEach((cell: Cell) => cell.isOnFocus = false);
+    rowOnTry.isOnTry = false;
+    setTimeout(() => {
+      const nextRowOnTry = rowOnTryIndex + 1 < this.size ? this.rows[rowOnTryIndex + 1] : null;
+      this.setNext(nextRowOnTry);
+      if(nextRowOnTry !== null) {
+        this.emitResetProgressBar.emit();
+      } else {
+        this.lingoService.updateLingoWords(this.getValidWords()).subscribe({
+          next: (updateWordsResult: UpdateWordsResult) => {
+            if(!updateWordsResult.valid) {
+              alert('Si è rotto qualcosa durante l\'update del lingoWords.txt');
+            }
+          }
+        });
+      }
+    }, 2000);
+  }
+
   tryWord(): void {
     const rowOnTryIndex = this.rows.findIndex((row: Row) => row.isOnTry);
     const rowOnTry = this.rows[rowOnTryIndex];
-    
-    let word = '';
-    rowOnTry.cells.forEach((cell: Cell) => word += cell.letter);
-
-    const nextRowOnTry = rowOnTryIndex + 1 < this.size ? this.rows[rowOnTryIndex + 1] : null;
+    let word = this.composeWordFromCells(rowOnTry);
     this.lingoService.checkWord(word).subscribe({
       next: (checkWordResult: CheckWordResult) => {
         if(!checkWordResult.valid) {
-          rowOnTry.cells.forEach((cell: Cell) => cell.state = CellState.error);
-        } else {
-          let letterNotFinded: string[] = [];
-          let index = 0;
-          for(const letter of this.word) {
-            if(letter !== rowOnTry.cells[index].letter) {
-              letterNotFinded.push(letter);
-            }
-            index++;
+          this.setErrorNextWord();
+          return;
+        } 
+        
+        let letterNotFinded: string[] = [];
+        let index = 0;
+        for(const letter of this.word) {
+          if(letter !== rowOnTry.cells[index].letter) {
+            letterNotFinded.push(letter);
           }
-      
-          rowOnTry?.cells.forEach((cell: Cell, index: number) => {
-            if(cell.letter === this.word[index]) {
-              cell.state = CellState.find;
-            } else {
-              const letterPresentIndex = letterNotFinded.findIndex((letter: string) => letter === cell.letter); 
-              if(letterPresentIndex !== -1) {
-                cell.state = CellState.present;
-                letterNotFinded.splice(letterPresentIndex, 1);
-              }
+          index++;
+        }
+    
+        rowOnTry?.cells.forEach((cell: Cell, index: number) => {
+          if(cell.letter === this.word[index]) {
+            cell.state = CellState.find;
+          } else {
+            const letterPresentIndex = letterNotFinded.findIndex((letter: string) => letter === cell.letter); 
+            if(letterPresentIndex !== -1) {
+              cell.state = CellState.present;
+              letterNotFinded.splice(letterPresentIndex, 1);
             }
-            cell.isDisabled = true;
-          });
+          }
+          cell.isDisabled = true;
+        });
+        rowOnTry.isOnTry = false;
 
-          this.rows.forEach((row: Row) => {
-            row.cells.forEach((cell: Cell, index: number) => {
-              if(cell.state === CellState.find && nextRowOnTry) {
-                nextRowOnTry.cells[index].letter = cell.letter;
-              }
-            });
-          })
+        if(rowOnTry.cells.every((cell: Cell) => cell.state === CellState.find)) {
+          this.emitStopProgressBar.emit();
+          return;
         }
 
-        rowOnTry.isOnTry = false;
-        if(nextRowOnTry) {
-          nextRowOnTry.isOnTry = true;
-          nextRowOnTry.isVisible = true;
-          let focusAssigned = false;
-          nextRowOnTry.cells.forEach((cell: Cell) => {
-            cell.isDisabled = false;
-            if(cell.letter === '' && !focusAssigned) {
-              cell.isOnFocus = true;
-              focusAssigned = true;
+        const nextRowOnTry = rowOnTryIndex + 1 < this.size ? this.rows[rowOnTryIndex + 1] : null;
+        this.setNext(nextRowOnTry);
+
+        if(nextRowOnTry !== null) {
+          this.emitResetProgressBar.emit();
+        } else {
+          this.lingoService.updateLingoWords(this.getValidWords()).subscribe({
+            next: (updateWordsResult: UpdateWordsResult) => {
+              if(!updateWordsResult.valid) {
+                alert('Si è rotto qualcosa durante l\'update del lingoWords.txt');
+              }
             }
           });
         }

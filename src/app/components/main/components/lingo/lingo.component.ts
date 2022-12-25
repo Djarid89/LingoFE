@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { Row, Cell } from './class/lingo';
 import { CellState, CheckWordResult, GetWordResult, UpdateWordsResult } from './interface/lingo';
 import { LingoService } from './services/lingo.service';
@@ -15,6 +15,15 @@ export class LingoComponent implements OnChanges {
   @Output() emitResetProgressBar = new EventEmitter<void>();
   @Output() emitStopProgressBar = new EventEmitter<void>();
   @Output() emitShowProgressBar = new EventEmitter<boolean>();
+  @HostListener('document:keydown.enter', ['$event']) onKeydownHandler(event: KeyboardEvent) {
+    const rowOnTry = this.rows.find((row: Row) => row.isOnTry);
+    if(!rowOnTry) {
+      return;
+    }
+    if(rowOnTry.cells.every((cell: Cell) => cell.letter !== '')) {
+      this.tryWord();
+    }
+}
   word = '';
   wordDiscover = '';
   rows: Row[] = [];
@@ -69,12 +78,11 @@ export class LingoComponent implements OnChanges {
     return `repeat(${this.rows.length}, 1fr)`;
   }
   
-  setIsCompleted(row: Row, cell: Cell): void {
+  setFocus(row: Row, cell: Cell): void {
     row.cells.forEach((cell: Cell) => cell.isOnFocus = false);
+    this.emitStopProgressBar.emit();
     setTimeout(() => {
-      if(row.cells.every((cell: Cell) => cell.letter !== '')) {
-        this.tryWord();
-      } else if(cell.index + 1 < this.size) {
+      if(cell.index + 1 < this.size) {
         row.cells[cell.index + 1].isOnFocus = true;
       }
     });
@@ -133,27 +141,42 @@ export class LingoComponent implements OnChanges {
     rowOnTry?.cells.forEach((cell: Cell) => cell.isDisabled = true);
     rowOnTry?.cells.forEach((cell: Cell) => cell.isOnFocus = false);
     rowOnTry.isOnTry = false;
+    this.emitStopProgressBar.emit();
     setTimeout(() => {
       const nextRowOnTry = rowOnTryIndex + 1 < this.size ? this.rows[rowOnTryIndex + 1] : null;
       this.setNext(nextRowOnTry);
       if(nextRowOnTry !== null) {
         this.emitResetProgressBar.emit();
       } else {
-        this.lingoService.updateLingoWords(this.getValidWords()).subscribe({
-          next: (updateWordsResult: UpdateWordsResult) => {
-            if(!updateWordsResult.valid) {
-              alert('Si è rotto qualcosa durante l\'update del lingoWords.txt');
-            }
-          }
-        });
+        this.updateLingoWords();
       }
-    }, 2000);
+    }, 1500);
+  }
+
+  private updateLingoWords(): void {
+    this.lingoService.updateLingoWords(this.getValidWords()).subscribe({
+      next: (updateWordsResult: UpdateWordsResult) => {
+        if(!updateWordsResult.valid) {
+          alert('Si è rotto qualcosa durante l\'update del lingoWords.txt');
+        }
+      }
+    });
   }
 
   tryWord(): void {
     const rowOnTryIndex = this.rows.findIndex((row: Row) => row.isOnTry);
     const rowOnTry = this.rows[rowOnTryIndex];
     let word = this.composeWordFromCells(rowOnTry);
+    for(let row of this.rows) {
+      if(row === rowOnTry) {
+        continue;
+      }
+      const rowWord = this.composeWordFromCells(row);
+      if(rowWord === word) {
+        this.setErrorNextWord();
+        return;
+      }
+    };
     this.lingoService.checkWord(word).subscribe({
       next: (checkWordResult: CheckWordResult) => {
         if(!checkWordResult.valid) {
@@ -185,6 +208,7 @@ export class LingoComponent implements OnChanges {
         rowOnTry.isOnTry = false;
 
         if(rowOnTry.cells.every((cell: Cell) => cell.state === CellState.find)) {
+          this.updateLingoWords();
           this.emitStopProgressBar.emit();
           return;
         }
@@ -195,13 +219,8 @@ export class LingoComponent implements OnChanges {
         if(nextRowOnTry !== null) {
           this.emitResetProgressBar.emit();
         } else {
-          this.lingoService.updateLingoWords(this.getValidWords()).subscribe({
-            next: (updateWordsResult: UpdateWordsResult) => {
-              if(!updateWordsResult.valid) {
-                alert('Si è rotto qualcosa durante l\'update del lingoWords.txt');
-              }
-            }
-          });
+          this.emitStopProgressBar.emit();
+          this.updateLingoWords();
         }
       }
     });

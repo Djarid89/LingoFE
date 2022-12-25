@@ -25,6 +25,10 @@ export class ProgressBarComponent implements AfterViewInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if(!this.greenBar) {
+      return;
+    }
+    
     if(changes.show?.currentValue || changes.reset?.currentValue ) {
       this.greenBar.nativeElement.style.backgroundColor = `#2bc253`;
       if(changes.reset?.currentValue && this.interval) {
@@ -53,7 +57,7 @@ export class ProgressBarComponent implements AfterViewInit, OnChanges {
     greenBar.nativeElement.style.width = `${step.value}%`;
     
     if(step.value === 75) {
-      greenBar.nativeElement.style.backgroundColor = `yellow`;
+      greenBar.nativeElement.style.backgroundColor = `orange`;
     } else if(step.value === 25) {
       greenBar.nativeElement.style.backgroundColor = `red`;
     } else if(step.value === 0) {

@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
+import { Router } from '@angular/router';
+import { Player } from '../game/class/game';
 
 @Component({
   selector: 'app-main',
@@ -6,35 +8,20 @@ import { Component } from '@angular/core';
   styleUrls: ['./main.component.scss']
 })
 export class MainComponent {
-  showProgressBar = false;
-  newGame = false;
-  timeIsUp = false;
-  resetProgressBar = false;
-  stopProgressBar = false;
-  size = 5;
-
-  setShowProgressBar(showProgressBar: boolean): void {
-    this.showProgressBar = showProgressBar;
+  @HostListener('document:keydown.enter', ['$event']) onKeydownHandler() {
+    if(this.playerName === '') {
+      return;
+    }
+    this.players.push(new Player(this.playerName));
+    this.playerName = '';
   }
 
-  setNewGame(): void {
-    this.newGame = true;
-    this.setResetProgressBar();
-    setTimeout(() => this.newGame = false);
-  }
+  players: Player[] = [];
+  playerName = '';
 
-  setTimeIsUp(): void {
-    this.timeIsUp = true;
-    setTimeout(() => this.timeIsUp = false);
-  }
+  constructor(private readonly router: Router) {}
 
-  setResetProgressBar(): void {
-    this.resetProgressBar = true;
-    setTimeout(() => this.resetProgressBar = false);
-  }
-
-  setStopProgressBar(): void {
-    this.stopProgressBar = true;
-    setTimeout(() => this.stopProgressBar = false);
+  startGame(): void {
+    this.router.navigate(['/game'], { state: { players: this.players } });
   }
 }

@@ -3,11 +3,12 @@ import { BrowserModule } from '@angular/platform-browser';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { MainComponent } from './components/main/main.component';
-import { LingoComponent } from './components/main/components/lingo/lingo.component';
-import { CellComponent } from './components/main/components/lingo/components/cell/cell.component';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { ProgressBarComponent } from './components/main/components/progress-bar/progress-bar.component';
+import { GameComponent } from './components/game/game.component';
+import { CellComponent } from './components/game/components/lingo/components/cell/cell.component';
+import { LingoComponent } from './components/game/components/lingo/lingo.component';
+import { ProgressBarComponent } from './components/game/components/progress-bar/progress-bar.component';
 
 @NgModule({
   declarations: [
@@ -15,7 +16,8 @@ import { ProgressBarComponent } from './components/main/components/progress-bar/
     MainComponent,
     LingoComponent,
     CellComponent,
-    ProgressBarComponent
+    ProgressBarComponent,
+    GameComponent
   ],
   imports: [
     BrowserModule,

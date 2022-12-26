@@ -1,4 +1,5 @@
 import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, Output, SimpleChanges, ViewChild } from '@angular/core';
+import { Player } from '../../class/game';
 import { Row, Cell } from './class/lingo';
 import { CellState, CheckWordResult, GetWordResult, UpdateWordsResult } from './interface/lingo';
 import { LingoService } from './services/lingo.service';
@@ -12,10 +13,11 @@ export class LingoComponent implements OnChanges {
   @Input() size = 5;
   @Input() newGame = false;
   @Input() timeIsUp = false;
+  @Input() players: Player[] = [];
   @Output() emitResetProgressBar = new EventEmitter<void>();
   @Output() emitStopProgressBar = new EventEmitter<void>();
   @Output() emitShowProgressBar = new EventEmitter<boolean>();
-  @HostListener('document:keydown.enter', ['$event']) onKeydownHandler(event: KeyboardEvent) {
+  @HostListener('document:keydown.enter', ['$event']) onKeydownHandler() {
     const rowOnTry = this.rows.find((row: Row) => row.isOnTry);
     if(!rowOnTry) {
       return;
@@ -23,7 +25,8 @@ export class LingoComponent implements OnChanges {
     if(rowOnTry.cells.every((cell: Cell) => cell.letter !== '')) {
       this.tryWord();
     }
-}
+  }
+  
   word = '';
   wordDiscover = '';
   rows: Row[] = [];
@@ -44,7 +47,12 @@ export class LingoComponent implements OnChanges {
     this.rows = [];
     this.lingoService.getWord(this.size).subscribe({
       next: (getWordResult: GetWordResult) => {
-        this.word = getWordResult.word.toUpperCase();
+        if(getWordResult.error) {
+          alert(getWordResult.error);
+          return;
+        }
+
+        this.word = getWordResult.word.toUpperCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
         for(let i = 0; i < this.size; i++) {
           const row = new Row(this.size);
           if(i === 0) {
@@ -104,7 +112,7 @@ export class LingoComponent implements OnChanges {
           nextRowOnTry.cells[index].letter = cell.letter;
         }
       });
-    })
+    });
     nextRowOnTry.isOnTry = true;
     nextRowOnTry.isVisible = true;
     let focusAssigned = false;
@@ -142,6 +150,19 @@ export class LingoComponent implements OnChanges {
     rowOnTry?.cells.forEach((cell: Cell) => cell.isOnFocus = false);
     rowOnTry.isOnTry = false;
     this.emitStopProgressBar.emit();
+    
+    const index = this.players.findIndex((player: Player) => player.innerMyTurn);
+    if(index === -1) {
+      return;
+    }
+
+    let nextPlayerIndex = index + 1;
+    if(nextPlayerIndex >= this.players.length) {
+      nextPlayerIndex = 0;
+    }
+    this.players[index].innerMyTurn = false;
+    this.players[nextPlayerIndex].innerMyTurn = true;
+
     setTimeout(() => {
       const nextRowOnTry = rowOnTryIndex + 1 < this.size ? this.rows[rowOnTryIndex + 1] : null;
       this.setNext(nextRowOnTry);
@@ -208,6 +229,12 @@ export class LingoComponent implements OnChanges {
         rowOnTry.isOnTry = false;
 
         if(rowOnTry.cells.every((cell: Cell) => cell.state === CellState.find)) {
+          const currentPlayer = this.players.find((player: Player) => player.innerMyTurn);
+          if(!currentPlayer) {
+            return;
+          }
+          currentPlayer.score++;
+
           this.updateLingoWords();
           this.emitStopProgressBar.emit();
           return;

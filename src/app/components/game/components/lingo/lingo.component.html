@@ -1,4 +1,10 @@
 <ng-container *ngIf="word">
+  <div>Giocatori</div>
+  <div class="playersList">
+    <div class="player" [class.isMyTurn]="player.innerMyTurn" *ngFor="let player of players">
+      {{player.name}}: {{player.score}}
+    </div>
+  </div>
   <div class="row" *ngFor="let row of rows" [ngStyle]="{ 'grid-template-columns': getRowStyle() }">
     <lng-cell *ngFor="let cell of row.cells"
       [isOnFocus]="cell.isOnFocus"
@@ -7,6 +13,6 @@
       (emitLetterChange)="setFocus(row, $event)">
     </lng-cell>
   </div>
+  <button (click)="showWord()">SHOW WORD</button>
+  {{wordDiscover}}
 </ng-container>
-<button (click)="showWord()">SHOW WORD</button>
-{{wordDiscover}}

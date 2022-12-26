@@ -1,19 +1,6 @@
-<div class="size">
-  <label for="size">Lunghezza parole</label>
-  <input id="size" type="number" [(ngModel)]="size">
+<div class="title">Inserire i giocatori</div>
+<input class="nameInput" type="text" [(ngModel)]="playerName">
+<div class="nameList">
+  <div class="name" *ngFor="let player of players">{{player.name}}</div>
 </div>
-<lng-lingo (emitShowProgressBar)="setShowProgressBar($event)"
-           (emitResetProgressBar)="setResetProgressBar()"
-           (emitStopProgressBar)="setStopProgressBar()"
-           [size]="size"
-           [newGame]="newGame"
-           [timeIsUp]="timeIsUp">
-</lng-lingo>
-<lng-progress-bar [show]="showProgressBar"
-                  [reset]="resetProgressBar"
-                  [stop]="stopProgressBar"
-                  (emitEndTime)="setTimeIsUp()">
-</lng-progress-bar>
-<div class="newLingo">
-  <button (click)="setNewGame()">GET NEW LINGO</button>
-</div>
+<button *ngIf="players.length" (click)="startGame()">START</button>

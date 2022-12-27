@@ -38,7 +38,7 @@ export class LingoComponent implements OnChanges {
     if(changes.newGame?.currentValue) {
       this.getWord();
     } else if(changes.timeIsUp?.currentValue) {
-      this.setErrorNextWord();
+      this.setErrorNextWord(this.rows.findIndex((row: Row) => row.isOnTry));
     }
   }
 
@@ -101,6 +101,66 @@ export class LingoComponent implements OnChanges {
     setTimeout(() => this.wordDiscover = '', 5000);
   }
 
+  tryWord(): void {
+    const rowOnTryIndex = this.rows.findIndex((row: Row) => row.isOnTry);
+    const rowOnTry = this.rows[rowOnTryIndex];
+    let word = this.composeWordFromCells(rowOnTry);
+    this.findDoubleWord(rowOnTry, word, rowOnTryIndex);
+
+    this.lingoService.checkWord(word).subscribe({
+      next: (checkWordResult: CheckWordResult) => {
+        if(!checkWordResult.valid) {
+          this.setErrorNextWord(rowOnTryIndex);
+          return;
+        } 
+        
+        const letterNotFinded = this.getLetterNotFinded(rowOnTry);
+        rowOnTry?.cells.forEach((cell: Cell, index: number) => {
+          if(cell.letter === this.word[index]) {
+            cell.state = CellState.find;
+          } else {
+            const letterPresentIndex = letterNotFinded.findIndex((letter: string) => letter === cell.letter); 
+            if(letterPresentIndex !== -1) {
+              cell.state = CellState.present;
+              letterNotFinded.splice(letterPresentIndex, 1);
+            }
+          }
+          cell.isDisabled = true;
+        });
+        rowOnTry.isOnTry = false;
+
+        if(rowOnTry.cells.every((cell: Cell) => cell.state === CellState.find)) {
+          const currentPlayer = this.players.find((player: Player) => player.innerMyTurn) as Player;
+          currentPlayer.score++;
+          this.updateLingoWords();
+          this.emitStopProgressBar.emit();
+          return;
+        }
+
+        const nextRowOnTry = rowOnTryIndex + 1 < this.size ? this.rows[rowOnTryIndex + 1] : null;
+        this.setNext(nextRowOnTry);
+        if(nextRowOnTry !== null) {
+          this.emitResetProgressBar.emit();
+        } else {
+          this.emitStopProgressBar.emit();
+          this.updateLingoWords();
+        }
+      }
+    });
+  }
+
+  private getLetterNotFinded(rowOnTry: Row): string [] {
+    const result = []; 
+    let index = 0;
+    for(const letter of this.word) {
+      if(letter !== rowOnTry.cells[index].letter) {
+        result.push(letter);
+      }
+      index++;
+    }
+    return result;
+  }
+
   private setNext(nextRowOnTry: Row | null): void {
     if(!nextRowOnTry) {
       return ;
@@ -132,7 +192,6 @@ export class LingoComponent implements OnChanges {
         validWords.push(this.composeWordFromCells(row));
       }
     });
-
     return validWords;
   }
 
@@ -142,12 +201,13 @@ export class LingoComponent implements OnChanges {
     return word;
   }
 
-  private setErrorNextWord(): void {
-    const rowOnTryIndex = this.rows.findIndex((row: Row) => row.isOnTry);
+  private setErrorNextWord(rowOnTryIndex: number): void {
     const rowOnTry = this.rows[rowOnTryIndex];
-    rowOnTry?.cells.forEach((cell: Cell) => cell.state = CellState.error);
-    rowOnTry?.cells.forEach((cell: Cell) => cell.isDisabled = true);
-    rowOnTry?.cells.forEach((cell: Cell) => cell.isOnFocus = false);
+    rowOnTry?.cells.forEach((cell: Cell) => {
+      cell.state = CellState.error
+      cell.isDisabled = true;
+      cell.isOnFocus = false;
+    });
     rowOnTry.isOnTry = false;
     this.emitStopProgressBar.emit();
     
@@ -175,81 +235,30 @@ export class LingoComponent implements OnChanges {
   }
 
   private updateLingoWords(): void {
-    this.lingoService.updateLingoWords(this.getValidWords()).subscribe({
+    const validWords = this.getValidWords();
+    this.lingoService.updateLingoWords(validWords).subscribe({
       next: (updateWordsResult: UpdateWordsResult) => {
-        if(!updateWordsResult.valid) {
+        if(!updateWordsResult.valid ) {
           alert('Si è rotto qualcosa durante l\'update del lingoWords.txt');
+        }
+
+        if(updateWordsResult.wordsAdded?.length) {
+          alert(`Aggiunte al dizionario: ${updateWordsResult.wordsAdded.join(',')}`)
         }
       }
     });
   }
 
-  tryWord(): void {
-    const rowOnTryIndex = this.rows.findIndex((row: Row) => row.isOnTry);
-    const rowOnTry = this.rows[rowOnTryIndex];
-    let word = this.composeWordFromCells(rowOnTry);
+  private findDoubleWord(rowOnTry: Row, word: string, rowOnTryIndex: number): void {
     for(let row of this.rows) {
       if(row === rowOnTry) {
         continue;
       }
       const rowWord = this.composeWordFromCells(row);
       if(rowWord === word) {
-        this.setErrorNextWord();
+        this.setErrorNextWord(rowOnTryIndex);
         return;
       }
     };
-    this.lingoService.checkWord(word).subscribe({
-      next: (checkWordResult: CheckWordResult) => {
-        if(!checkWordResult.valid) {
-          this.setErrorNextWord();
-          return;
-        } 
-        
-        let letterNotFinded: string[] = [];
-        let index = 0;
-        for(const letter of this.word) {
-          if(letter !== rowOnTry.cells[index].letter) {
-            letterNotFinded.push(letter);
-          }
-          index++;
-        }
-    
-        rowOnTry?.cells.forEach((cell: Cell, index: number) => {
-          if(cell.letter === this.word[index]) {
-            cell.state = CellState.find;
-          } else {
-            const letterPresentIndex = letterNotFinded.findIndex((letter: string) => letter === cell.letter); 
-            if(letterPresentIndex !== -1) {
-              cell.state = CellState.present;
-              letterNotFinded.splice(letterPresentIndex, 1);
-            }
-          }
-          cell.isDisabled = true;
-        });
-        rowOnTry.isOnTry = false;
-
-        if(rowOnTry.cells.every((cell: Cell) => cell.state === CellState.find)) {
-          const currentPlayer = this.players.find((player: Player) => player.innerMyTurn);
-          if(!currentPlayer) {
-            return;
-          }
-          currentPlayer.score++;
-
-          this.updateLingoWords();
-          this.emitStopProgressBar.emit();
-          return;
-        }
-
-        const nextRowOnTry = rowOnTryIndex + 1 < this.size ? this.rows[rowOnTryIndex + 1] : null;
-        this.setNext(nextRowOnTry);
-
-        if(nextRowOnTry !== null) {
-          this.emitResetProgressBar.emit();
-        } else {
-          this.emitStopProgressBar.emit();
-          this.updateLingoWords();
-        }
-      }
-    });
   }
 }

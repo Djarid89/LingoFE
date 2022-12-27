@@ -12,6 +12,7 @@ export interface UpdateWordsData {
 }
 
 export interface UpdateWordsResult {
+  wordsAdded: string[];
   valid: boolean;
 }
 
